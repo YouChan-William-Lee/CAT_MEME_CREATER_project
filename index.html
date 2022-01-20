@@ -42,18 +42,24 @@
       },
     };
 
+    const fetchCat = async (text) => {
+      const OPEN_API_DOMAIN = "https://cataas.com";
+      const response = await fetch(`${OPEN_API_DOMAIN}/cat/says/${text}?json=true`);
+      const responseJson = await response.json();
+      return `${OPEN_API_DOMAIN}/${responseJson.url}`;
+    };
+
     const Title = (props) => {
       return <h1>{props.children}</h1>;
     };
 
     const Form = ({ updateMainCat }) => {
-      const includesEnglish = (text) => /[e-z]/i.test(text);
+      const includesEnglish = (text) => /[e-z|A-Z]/i.test(text);
       const [value, setValue] = React.useState("");
       const [errorMessage, setErrorMessage] = React.useState("");
 
       function handleInputChange(e) {
         const userValue = e.target.value;
-        console.log(userValue)
         setErrorMessage("");
         if (!includesEnglish(userValue)) {
           setErrorMessage("Only english please");
@@ -69,7 +75,7 @@
           setErrorMessage("Empty value is not allowed");
           return;
         }
-        updateMainCat();
+        updateMainCat(value);
       }
 
       return (
@@ -96,6 +102,10 @@
     }
 
     function Favorites({ favorites }) {
+      if (favorites.length === 0) {
+        return <div>Let's save the cat meme by clicking the heart button</div>
+      }
+
       return (
         <ul className="favorites">
           {favorites.map((cat) => (
@@ -105,11 +115,12 @@
       );
     }
 
-    const MainCard = ({ img, onHeartClick }) => {
+    const MainCard = ({ img, onHeartClick, alreadyFavorite }) => {
+      const heartIcon = alreadyFavorite ? "💖" : "🤍";
       return (
         <div className="main-card">
           <img src={img} alt="CAT" width="400" />
-          <button onClick={onHeartClick}>🤍</button>
+          <button onClick={onHeartClick}>{heartIcon}</button>
         </div>
       );
     };
@@ -122,19 +133,37 @@
       const CAT3 =
         "https://cataas.com/cat/595f280b557291a9750ebf65/says/JavaScript";
 
-      const [counter, setCounter] = React.useState(
-        jsonLocalStorage.getItem("counter")
-      );
+      const [counter, setCounter] = React.useState(() => {
+        return jsonLocalStorage.getItem("counter");
+      });
       const [mainCat, setMainCat] = React.useState(CAT1);
-      const [favorites, setFavorites] = React.useState(
-        jsonLocalStorage.getItem("favorites") || []
-      );
+      const [favorites, setFavorites] = React.useState(() => {
+        return jsonLocalStorage.getItem("favorites") || [];
+      });
 
-      function updateMainCat() {
-        setMainCat(CAT2);
-        const nextCounter = counter + 1;
-        setCounter(nextCounter);
-        jsonLocalStorage.setItem("counter", nextCounter);
+      const alreadyFavorite = favorites.includes(mainCat)
+
+      // Set the first cat image
+      async function setInitialCat() {
+        const newCat = await fetchCat('First cat');
+        setMainCat(newCat);
+      }
+
+      // Call setInitialCat() just once
+      React.useEffect(() => {
+        setInitialCat();
+      }, [])
+
+      async function updateMainCat(value) {
+        const newCat = await fetchCat(value);
+
+        setMainCat(newCat);
+
+        setCounter((prev) => {
+          const nextCounter = prev + 1;
+          jsonLocalStorage.setItem("counter", nextCounter);
+          return nextCounter;
+        });
       }
 
       function handleHeartClick() {
@@ -143,11 +172,13 @@
         jsonLocalStorage.setItem("favorites", nextFavorites);
       }
 
+      const counterTitle = counter === null ? "" : counter + " ";
+
       return (
         <div>
-          <Title>{counter} CAT MEME</Title>
+          <Title>{counterTitle}CAT MEME</Title>
           <Form updateMainCat={updateMainCat} />
-          <MainCard img={mainCat} onHeartClick={handleHeartClick} />
+          <MainCard img={mainCat} onHeartClick={handleHeartClick} alreadyFavorite={alreadyFavorite} />
           <Favorites favorites={favorites} />
         </div>
       );
