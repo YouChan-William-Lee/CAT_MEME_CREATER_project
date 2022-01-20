@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -54,8 +53,9 @@
 
       function handleInputChange(e) {
         const userValue = e.target.value;
+        console.log(userValue)
         setErrorMessage("");
-        if (includesHangul(userValue)) {
+        if (!includesEnglish(userValue)) {
           setErrorMessage("Only english please");
         }
         setValue(userValue.toUpperCase());
